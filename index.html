@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Airdrop Farming Tracker</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 0 20px;
+            background-color: #f0f4f8;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+
+        .form-container, .controls {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        input {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 200px;
+        }
+
+        input[type="file"] {
+            width: auto;
+            padding: 6px;
+        }
+
+        button {
+            padding: 8px 15px;
+            margin: 5px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #34495e;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #ecf0f1;
+        }
+
+        a {
+            color: #e74c3c;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .action-btn {
+            padding: 5px 10px;
+            margin-right: 5px;
+            font-size: 12px;
+        }
+
+        .edit-btn {
+            background-color: #f1c40f;
+        }
+
+        .edit-btn:hover {
+            background-color: #e1b107;
+        }
+
+        .delete-btn {
+            background-color: #e74c3c;
+        }
+
+        .delete-btn:hover {
+            background-color: #c0392b;
+        }
+    </style>
+</head>
+<body>
+    <h1>Airdrop Farming Tracker</h1>
+    
+    <!-- Form to add new airdrops -->
+    <div class="form-container">
+        <input type="text" id="airdropName" placeholder="Airdrop Name">
+        <input type="url" id="airdropLink" placeholder="Airdrop Link">
+        <input type="text" id="airdropStatus" placeholder="Status (e.g., Active, Claimed)">
+        <button onclick="addAirdrop()">Add Airdrop</button>
+    </div>
+
+    <!-- Controls for sorting, exporting, and importing -->
+    <div class="controls">
+        <button onclick="sortAirdrops('name')">Sort by Name</button>
+        <button onclick="sortAirdrops('status')">Sort by Status</button>
+        <button onclick="exportAirdrops()">Export to JSON</button>
+        <input type="file" id="importFile" accept=".json" style="display: inline-block;">
+        <button onclick="importAirdrops()">Import from JSON</button>
+    </div>
+
+    <!-- Table to display airdrops -->
+    <table id="airdropTable">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Link</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="airdropList"></tbody>
+    </table>
+
+    <script>
+        // Load airdrops on page load
+        document.addEventListener('DOMContentLoaded', loadAirdrops);
+
+        let airdrops = JSON.parse(localStorage.getItem('airdrops')) || [];
+
+        function loadAirdrops() {
+            airdrops.forEach((airdrop, index) => displayAirdrop(airdrop, index));
+        }
+
+        function addAirdrop() {
+            const name = document.getElementById('airdropName').value.trim();
+            const link = document.getElementById('airdropLink').value.trim();
+            const status = document.getElementById('airdropStatus').value.trim();
+
+            if (name && link && status) {
+                const airdrop = { name, link, status };
+                airdrops.push(airdrop);
+                displayAirdrop(airdrop, airdrops.length - 1);
+                saveAirdrops();
+
+                // Clear inputs
+                document.getElementById('airdropName').value = '';
+                document.getElementById('airdropLink').value = '';
+                document.getElementById('airdropStatus').value = '';
+            } else {
+                alert('Please fill in all fields!');
+            }
+        }
+
+        function displayAirdrop(airdrop, index) {
+            const tableBody = document.getElementById('airdropList');
+            const row = document.createElement('tr');
+            row.setAttribute('data-index', index);
+
+            row.innerHTML = `
+                <td>${airdrop.name}</td>
+                <td><a href="${airdrop.link}" target="_blank">${airdrop.link}</a></td>
+                <td>${airdrop.status}</td>
+                <td>
+                    <button class="action-btn edit-btn" onclick="editAirdrop(${index})">Edit</button>
+                    <button class="action-btn delete-btn" onclick="deleteAirdrop(${index})">Delete</button>
+                </td>
+            `;
+
+            tableBody.appendChild(row);
+        }
+
+        function saveAirdrops() {
+            localStorage.setItem('airdrops', JSON.stringify(airdrops));
+        }
+
+        function editAirdrop(index) {
+            const newName = prompt('Enter new name:', airdrops[index].name);
+            const newLink = prompt('Enter new link:', airdrops[index].link);
+            const newStatus = prompt('Enter new status:', airdrops[index].status);
+
+            if (newName && newLink && newStatus) {
+                airdrops[index] = { name: newName, link: newLink, status: newStatus };
+                refreshTable();
+                saveAirdrops();
+            } else if (newName !== null && newLink !== null && newStatus !== null) {
+                alert('All fields are required for editing!');
+            }
+        }
+
+        function deleteAirdrop(index) {
+            if (confirm('Are you sure you want to delete this airdrop?')) {
+                airdrops.splice(index, 1);
+                refreshTable();
+                saveAirdrops();
+            }
+        }
+
+        function sortAirdrops(key) {
+            airdrops.sort((a, b) => a[key].localeCompare(b[key]));
+            refreshTable();
+        }
+
+        function refreshTable() {
+            const tableBody = document.getElementById('airdropList');
+            tableBody.innerHTML = '';
+            airdrops.forEach((airdrop, index) => displayAirdrop(airdrop, index));
+        }
+
+        function exportAirdrops() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(airdrops, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute('href', dataStr);
+            downloadAnchor.setAttribute('download', 'airdrops.json');
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            document.body.removeChild(downloadAnchor);
+        }
+
+        function importAirdrops() {
+            const fileInput = document.getElementById('importFile');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('Please select a JSON file to import!');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const importedAirdrops = JSON.parse(event.target.result);
+                    if (Array.isArray(importedAirdrops) && importedAirdrops.every(item => 
+                        item.name && item.link && item.status)) {
+                        // Merge imported airdrops, skipping duplicates by name
+                        importedAirdrops.forEach(imported => {
+                            if (!airdrops.some(existing => existing.name === imported.name)) {
+                                airdrops.push(imported);
+                            }
+                        });
+                        refreshTable();
+                        saveAirdrops();
+                        alert('Airdrops imported successfully!');
+                    } else {
+                        alert('Invalid JSON format! Must be an array of objects with name, link, and status.');
+                    }
+                } catch (e) {
+                    alert('Error parsing JSON file: ' + e.message);
+                }
+            };
+            reader.readAsText(file);
+            fileInput.value = ''; // Reset file input
+        }
+    </script>
+</body>
+</html>
